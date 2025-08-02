@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: t-hisys-qcheng
+  name: data-loader
+spec:
+  nodeSelector:
+    scitix.ai/gpu-type: h20xnvlink141
+
+  volumes:
+    - name: everything
+      hostPath:
+        path: /mnt/xstorage
+        type: Directory
+    - name: dev-shm
+      hostPath:
+        path: /dev/shm
+
+  containers:
+    - name: data-loader
+      image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v1.0
+      command: ["sleep", "infinity"] 
+      volumeMounts:
+        - name: everything
+          mountPath: "/datasets"
+        - name: dev-shm
+          mountPath: /dev/shm
