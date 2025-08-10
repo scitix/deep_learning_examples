@@ -23,7 +23,7 @@ spec:
               effect: "NoSchedule"
           containers:
             - name: pytorch
-              image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v2.0
+              image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v1.0
               imagePullPolicy: IfNotPresent
               command:
                 - /bin/bash
