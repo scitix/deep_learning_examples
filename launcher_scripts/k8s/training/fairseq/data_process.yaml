@@ -1,27 +1,75 @@
-apiVersion: v1
-kind: Pod
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
 metadata:
+  name: data-process
   namespace: t-hisys-qcheng
-  name: data-loader
 spec:
-  nodeSelector:
-    scitix.ai/gpu-type: h20xnvlink141
-
-  volumes:
-    - name: everything
-      hostPath:
-        path: /mnt/xstorage
-        type: Directory
-    - name: dev-shm
-      hostPath:
-        path: /dev/shm
-
-  containers:
-    - name: data-loader
-      image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v1.0
-      command: ["sleep", "infinity"] 
-      volumeMounts:
-        - name: everything
-          mountPath: "/datasets"
-        - name: dev-shm
-          mountPath: /dev/shm
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: Never
+      template:
+        metadata:
+          annotations:
+            roce/gid-injection: '{"envName": "NCCL_IB_GID_INDEX"}'
+            sidecar.istio.io/inject: "false"
+            k8s.v1.cni.cncf.io/networks: kube-system/rdma0,kube-system/rdma1,kube-system/rdma2,kube-system/rdma3,kube-system/rdma4,kube-system/rdma5,kube-system/rdma6,kube-system/rdma7
+          labels:
+            scitix.ai/topo-aware-in-node: "true"
+        spec: &job-spec # YAML 锚点，方便 Worker 复用
+          tolerations:
+            - key: "scitix.ai/nodecheck"
+              operator: "Exists"
+              effect: "NoSchedule"
+          containers:
+            - name: pytorch
+              image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v2.0
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/bash
+                - -c
+                - "/everything/qcheng_workspace/train/deep_learning_examples/training/fairseq/data_process.sh"
+              resources:
+                limits:
+                  cpu: "80"
+                  memory: 800Gi
+                  nvidia.com/gpu: "8"
+                  nvidia.com/rdma0: "1"
+                  nvidia.com/rdma1: "1"
+                  nvidia.com/rdma2: "1"
+                  nvidia.com/rdma3: "1"
+                  nvidia.com/rdma4: "1"
+                  nvidia.com/rdma5: "1"
+                  nvidia.com/rdma6: "1"
+                  nvidia.com/rdma7: "1"
+              # 保留安全上下文
+              securityContext:
+                capabilities:
+                  add:
+                    - IPC_LOCK
+              volumeMounts:
+                - mountPath: /dev/shm
+                  name: dev-shm
+                - mountPath: /everything
+                  name: everything
+                - mountPath: /dev/shm/ramdisk
+                  name: ramdrisk
+          volumes:
+            - name: dev-shm
+              hostPath:
+                path: /dev/shm
+            - name: everything
+              hostPath:
+                path: /mnt/xstorage
+            - name: ramdrisk
+              emptyDir:
+                medium: Memory
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: roce/topology-unit
+                        operator: In
+                        values:
+                          - "unit1"

@@ -1,7 +1,7 @@
 apiVersion: kubeflow.org/v1
 kind: PyTorchJob
 metadata:
-  name: hubert-pretrain
+  name: hubert-pretrain-ram
   namespace: t-hisys-qcheng
 spec:
   pytorchReplicaSpecs:
@@ -23,21 +23,12 @@ spec:
               effect: "NoSchedule"
           containers:
             - name: pytorch
-              image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v1.0
+              image: registry-cn-shanghai.siflow.cn/hisys/fairseq-hpc:v2.0
               imagePullPolicy: IfNotPresent
               command:
                 - /bin/bash
                 - -c
-                - |
-                  /path/to/your/run_training_from_storage.sh \
-                      --wheelhouse "/everything/environment/wheelhouse" \
-                      --manifest-dir "/everything/manifests" \
-                      --kmeans-dir "/everything/kmeans_model" \
-                      --fairseq-repo "/workspace/fairseq" \
-                      --restore-file "/everything/models/hubert_xtralarge_ll60k.pt" \
-                      --old-base-path "/datasets/processed_output" \
-                      --new-base-path "/everything/processed_output" \
-                      --python-exec "/opt/conda/bin/python3"
+                - "/everything/qcheng_workspace/train/deep_learning_examples/training/fairseq/train_multi_pod.sh"
               resources:
                 limits:
                   cpu: "80"
@@ -59,16 +50,11 @@ spec:
               volumeMounts:
                 - mountPath: /dev/shm
                   name: dev-shm
-                - mountPath: /workspace/deep_learning_examples
-                  name: deep-learning-examples
                 - mountPath: /everything
                   name: everything
                 - mountPath: /dev/shm/ramdisk
                   name: ramdrisk
           volumes:
-            - name: deep-learning-examples
-              hostPath:
-                path: /tmp/deep_learning_examples
             - name: dev-shm
               hostPath:
                 path: /dev/shm
@@ -87,10 +73,9 @@ spec:
                         operator: In
                         values:
                           - "unit1"
-                          - "unit2"
 
     Worker:
-      replicas: 31
+      replicas: 15
       restartPolicy: Never
       template:
         metadata:
@@ -103,13 +88,3 @@ spec:
         spec:
           # 复用 Master的spec
           <<: *job-spec
-
-
-# /datasets/qcheng_workspace/train/benchmark/data/data-process/processed_output/5183/pony_rider_boys_texas_rangers_1312_librivox_64kb_mp3/
-# /mnt/xstorage/qcheng_workspace/train/deepseek-v3/datasets
-
-# ls -l /everything/qcheng_workspace/train/deepseek-v3/datasets/mmap_deepseekv3_datasets_text_document
-# total 1
-# drwxr-xr-x 3 1004 1004 4096 Jul 29 12:10 cache
-# root@deepseek-v3-pretrain-worker-0:/workspace# cd /everything/qcheng_workspace/train/deepseek-v3/datasets/mmap_deepseekv3_datasets_text_document
-# root@deepseek-v3-pretrain-worker-0:/everything/qcheng_workspace/train/deepseek-v3/datasets/mmap_deepseekv3_datasets_text_document# 

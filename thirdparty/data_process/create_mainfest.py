@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("--data-root", required=True, type=str, help="存放所有切分后音频的根目录的绝对路径。")
     parser.add_argument("--dest-dir", required=True, type=str, help="用于保存生成的 train.tsv 和 valid.tsv 文件的目录。")
     parser.add_argument("--valid-percent", default=0.01, type=float, help="用作验证集的数据百分比（例如 0.01 表示 1%）。")
-    parser.add_argument("--num-threads", default=1, type=int,
+    parser.add_argument("--num-threads", default=32, type=int,
                         help="用于并行处理文件信息的线程数量。")
     
     args = parser.parse_args()
