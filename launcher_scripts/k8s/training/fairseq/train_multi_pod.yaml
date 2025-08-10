@@ -1,7 +1,7 @@
 apiVersion: kubeflow.org/v1
 kind: PyTorchJob
 metadata:
-  name: hubert-pretrain-ram
+  name: hubert-pretrain
   namespace: t-hisys-qcheng
 spec:
   pytorchReplicaSpecs:

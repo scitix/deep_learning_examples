@@ -16,11 +16,11 @@ if ! grep -q "weights_only=False" "$DIST_UTILS_FILE"; then sed -i "s/torch.load(
   --master_addr=localhost                     \
   --master_port=29500                         \
   /opt/conda/bin/fairseq-hydra-train          \
-    --config-dir /workspace/fairseq/examples/hubert/config/pretrain                                 \
+    --config-dir /tmp/fairseq/examples/hubert/config/pretrain                                         \
     --config-name hubert_xlarge_librivox.yaml \
-    task.data=/dataeverythingsets/qcheng_workspace/train/benchmark/data/data-process/mainfest_dir   \
+    task.data=/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/manifests   \
     checkpoint.restore_file='$RESTORE_FILE'   \
-    task.label_dir=/everything/qcheng_workspace/train/benchmark/data/data-process/kmeans_model      \
+    task.label_dir=/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/kmeans_model              \
     model.label_rate=100                      \
     task.labels="[\"km\"]"                    \
     common.seed=42                            \

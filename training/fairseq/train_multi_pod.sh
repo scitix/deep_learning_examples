@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-MANIFEST_DIR="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/mainfest_dir"
+MANIFEST_DIR="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/manifests"
 KMEANMS_MODLE="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/kmeans_model"
 OLD_BASE_PATH="/datasets/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/processed_output"
 NEW_BASE_PATH="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/processed_output"

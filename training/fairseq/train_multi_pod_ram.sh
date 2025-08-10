@@ -2,14 +2,14 @@
 set -e
 
 
-MANIFEST_DIR="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/mainfest_dir"
+MANIFEST_DIR="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/manifests"
 ORIGINAL_DATA_DIR="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty"
 # RAM 挂载点
 RAMDISK_BASE_DIR="/dev/shm/ramdisk" 
 # 旧清单文件目录
 OLD_BASE_PATH="/everything/qcheng_workspace/train/deep_learning_examples/thirdparty/data_process/processed_output"
 # 复制数据到内存
-RAMDISK_MANIFEST_DIR="${RAMDISK_BASE_DIR}/data/data-process/mainfest_dir"
+RAMDISK_MANIFEST_DIR="${RAMDISK_BASE_DIR}/data/data-process/manifests"
 RAMDISK_KMEANS_MODEL_DIR="${RAMDISK_BASE_DIR}/data/data-process/kmeans_model"
 NEW_BASE_PATH="${RAMDISK_BASE_DIR}/data/data-process/processed_output"
 
