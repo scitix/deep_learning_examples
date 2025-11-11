@@ -1,0 +1,109 @@
+apiVersion: arks.ai/v1
+kind: ArksApplication
+metadata:
+  labels:
+    app.kubernetes.io/name: arks-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: jr-deepseek-v3-2-exp
+spec:
+  replicas: 1
+  runtime: sglang
+  runtimeImage: registry-cn-shanghai.siflow.cn/k8s/sglang:v0.5.4.post1-cu129-amd64
+  # for multi-node infer
+  # size: 2
+  # tensorParallelSize: 2
+  # for single-node infer
+  size: 1
+  tensorParallelSize: 8
+
+  # for V100 GPU
+  # runtimeCommonArgs:
+  # - --dtype=half
+  # - --max-model-len 32768
+  #
+  runtimeCommonArgs:
+  - --mem-fraction-static 0.85
+  - --context-length 32768
+  - --ep-size 8
+  - --enable-dp-attention
+  - --dp-size 8
+
+  # Optional, default to spec.model.name
+  # servedModelName: qwen-7b
+  model:
+    name: deepseek-v3-2-exp
+  instanceSpec:
+    env:
+    - name: SGLANG_HOST_IP
+      valueFrom: {fieldRef: {fieldPath: status.podIP}}
+    - name: HOST_IP
+      valueFrom: {fieldRef: {fieldPath: status.hostIP}}
+    - name: MC_TE_METRIC
+      value: "true"
+    - name: NCCL_IB_GID_INDEX
+      value: "5"
+    # - name: NCCL_IB_HCA
+    #   value: "mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7"
+    # - name: NCCL_IB_TC
+    #   value: "160"
+    - name: NCCL_VERSION
+      value: "2.26.5"
+    - name: "TORCH_NCCL_USE_COMM_NONBLOCKING"
+      value: "0"
+    - name: "NCCL_DEBUG"
+      value: "TRACE"
+    - name: "AWS_OFI_NCCL_VERSION"
+      value: "1.14.0"
+    - name: "UCX_IB_GID_INDEX"
+      value: "5"
+    - name: "UCX_NET_DEVICES"
+      value: "mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_4:1,mlx5_5:1,mlx5_6:1,mlx5_7:1"
+    - name: "UCX_TLS"
+      value: "^tcp"
+    - name: "NVSHMEM_IB_GID_INDEX"
+      value: "5"
+    - name: SGLANG_ENABLE_JIT_DEEPGEMM
+      value: "1" # TODO: shoule be 1
+    - name: NVSHMEM_DEBUG
+      value: "INFO"
+    - name: NVSHMEM_TOPO_DUMP
+      value: "1"
+    - name: NVSHMEM_IBGDA_DEBUG
+      value: "1"
+    - name: NVSHMEM_TRANSPORT
+      value: "IBGDA"
+    - name: NVSHMEM_IB_TRAFFIC_CLASS
+      value: "160"
+    - name: UCX_IB_TRAFFIC_CLASS
+      value: "160"
+    terminationGracePeriodSeconds: 2
+    annotations:
+      k8s.v1.cni.cncf.io/networks: kube-system/rdma0,kube-system/rdma1,kube-system/rdma2,kube-system/rdma3,kube-system/rdma4,kube-system/rdma5,kube-system/rdma6,kube-system/rdma7
+    volumeMounts:
+    - name: shm
+      mountPath: /dev/shm
+    volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+    resources:
+      limits:
+        nvidia.com/gpu: "8"
+        nvidia.com/rdma0: "1"
+        nvidia.com/rdma1: "1"
+        nvidia.com/rdma2: "1"
+        nvidia.com/rdma3: "1"
+        nvidia.com/rdma4: "1"
+        nvidia.com/rdma5: "1"
+        nvidia.com/rdma6: "1"
+        nvidia.com/rdma7: "1"
+      requests:
+        nvidia.com/gpu: "8"
+        nvidia.com/rdma0: "1"
+        nvidia.com/rdma1: "1"
+        nvidia.com/rdma2: "1"
+        nvidia.com/rdma3: "1"
+        nvidia.com/rdma4: "1"
+        nvidia.com/rdma5: "1"
+        nvidia.com/rdma6: "1"
+        nvidia.com/rdma7: "1"

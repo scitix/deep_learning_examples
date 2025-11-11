@@ -1,0 +1,285 @@
+apiVersion: arks.ai/v1
+kind: ArksDisaggregatedApplication
+metadata:
+  labels:
+    app.kubernetes.io/name: arks-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: jr-deepseek-r1-pd
+spec:
+  # TODO(user): Add fields here
+  runtime: sglang
+  routerImage: registry-cn-shanghai.siflow.cn/k8s/sglang:v0.5.2-cu126
+  runtimeImage: registry-cn-shanghai.siflow.cn/k8s/sglang:v0.5.1.post1-cu126
+  model:
+    name: deepseek-r1
+  router:
+    replicas: 1
+  decode:
+    replicas: 1
+    size: 2
+    runtimeCommonArgs:
+      - --disaggregation-mode decode
+      - --chunked-prefill-size 20480
+      - --page-size 64
+      - --tp-size 16
+      - --ep-size 16
+      - --moe-dense-tp-size 1
+      # - --speculative-algorithm EAGLE
+      # - --speculative-num-steps 1
+      # - --speculative-eagle-topk 1
+      # - --speculative-num-draft-tokens 2
+      - --enable-dp-attention
+      - --enable-dp-lm-head
+      - --dp-size 8
+      - --moe-a2a-backend deepep
+      - --deepep-mode low_latency
+      # - --enable-eplb
+      # - --eplb-algorithm deepseek
+      # - --ep-num-redundant-experts 32
+      # - --ep-dispatch-algorithm static
+      # - --load-balance-method round_robin
+      # - --enable-two-batch-overlap
+      - --mem-fraction-static 0.85
+      - --context-length 32768
+      - --cuda-graph-max-bs 64
+      - --max-running-requests 2048
+      - --trust-remote-code
+      - --disaggregation-transfer-backend nixl
+      - --disaggregation-ib-device mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7
+    instanceSpec:
+      env:
+      - name: SGLANG_HOST_IP
+        valueFrom: {fieldRef: {fieldPath: status.podIP}}
+      - name: HOST_IP
+        valueFrom: {fieldRef: {fieldPath: status.hostIP}}
+      - name: MC_TE_METRIC
+        value: "true"
+      - name: NCCL_IB_GID_INDEX
+        value: "5"
+      # - name: NCCL_IB_HCA
+      #   value: "mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7"
+      # - name: NCCL_IB_TC
+      #   value: "160"
+      - name: NCCL_VERSION
+        value: "2.26.5"
+      - name: "TORCH_NCCL_USE_COMM_NONBLOCKING"
+        value: "0"
+      - name: "NCCL_DEBUG"
+        value: "TRACE"
+      - name: "AWS_OFI_NCCL_VERSION"
+        value: "1.14.0"
+      - name: "UCX_IB_GID_INDEX"
+        value: "5"
+      - name: "UCX_NET_DEVICES"
+        value: "mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_4:1,mlx5_5:1,mlx5_6:1,mlx5_7:1"
+      - name: "UCX_TLS"
+        value: "^tcp"
+      - name: "NVSHMEM_IB_GID_INDEX"
+        value: "5"
+      - name: SGL_ENABLE_JIT_DEEPGEMM
+        value: "1" # TODO: shoule be 1
+      - name: NVSHMEM_DEBUG
+        value: "INFO"
+      - name: NVSHMEM_TOPO_DUMP
+        value: "1"
+      - name: NVSHMEM_IBGDA_DEBUG
+        value: "1"
+      - name: NVSHMEM_TRANSPORT
+        value: "IBGDA"
+      - name: NVSHMEM_IB_TRAFFIC_CLASS
+        value: "160"
+      - name: UCX_IB_TRAFFIC_CLASS
+        value: "160"
+      terminationGracePeriodSeconds: 2
+      annotations:
+        k8s.v1.cni.cncf.io/networks: kube-system/rdma0,kube-system/rdma1,kube-system/rdma2,kube-system/rdma3,kube-system/rdma4,kube-system/rdma5,kube-system/rdma6,kube-system/rdma7
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        initialDelaySeconds: 60
+        timeoutSeconds: 5
+        periodSeconds: 30
+        failureThreshold: 300
+      # hostNetwork: true
+        # nodeSelector:
+        #   scitix.ai/gpu-type: h100nvlink80
+      volumeMounts:
+      - name: shm
+        mountPath: /dev/shm
+      - name: dataset-vol
+        mountPath: /dataset
+      # - name: deepep-config
+      #   mountPath: /etc/deepep
+      volumes:
+      # - name: deepep-config
+      #   configMap:
+      #     name: deepep-config
+      - name: shm
+        emptyDir:
+          medium: Memory
+      - name: dataset-vol
+        persistentVolumeClaim:
+          claimName: dataset
+            # tolerations:
+            # - key: "node.kubernetes.io/unschedulable"
+            #   operator: "Exists"
+            #   effect: "NoSchedule"
+      resources:
+        limits:
+          nvidia.com/gpu: "8"
+          nvidia.com/rdma0: "1"
+          nvidia.com/rdma1: "1"
+          nvidia.com/rdma2: "1"
+          nvidia.com/rdma3: "1"
+          nvidia.com/rdma4: "1"
+          nvidia.com/rdma5: "1"
+          nvidia.com/rdma6: "1"
+          nvidia.com/rdma7: "1"
+        requests:
+          nvidia.com/gpu: "8"
+          nvidia.com/rdma0: "1"
+          nvidia.com/rdma1: "1"
+          nvidia.com/rdma2: "1"
+          nvidia.com/rdma3: "1"
+          nvidia.com/rdma4: "1"
+          nvidia.com/rdma5: "1"
+          nvidia.com/rdma6: "1"
+          nvidia.com/rdma7: "1"
+  prefill:
+    replicas: 1
+    size: 1
+    runtimeCommonArgs:
+      - --disaggregation-mode prefill
+      - --chunked-prefill-size 20480
+      - --page-size 64
+      - --tp-size 8
+      - --ep-size 8
+      - --moe-dense-tp-size 1
+      - --enable-dp-attention
+      - --enable-dp-lm-head
+      - --dp-size 4
+      - --moe-a2a-backend deepep
+      - --deepep-mode normal
+      # - --enable-eplb
+      # - --eplb-algorithm deepseek
+      # - --ep-num-redundant-experts 32
+      # - --ep-dispatch-algorithm dynamic
+      # - --enable-two-batch-overlap
+      - --mem-fraction-static 0.85
+      - --context-length 32768
+      # - --cuda-graph-max-bs 64
+      - --max-running-requests 2048
+      - --trust-remote-code
+      - --disaggregation-transfer-backend nixl
+      - --disaggregation-ib-device mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7
+    instanceSpec:
+      terminationGracePeriodSeconds: 1
+      readinessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        initialDelaySeconds: 60
+        timeoutSeconds: 5
+        periodSeconds: 30
+        failureThreshold: 300
+      annotations:
+        k8s.v1.cni.cncf.io/networks: kube-system/rdma0,kube-system/rdma1,kube-system/rdma2,kube-system/rdma3,kube-system/rdma4,kube-system/rdma5,kube-system/rdma6,kube-system/rdma7
+        roce/gid-injection: '{"envName": "NCCL_IB_GID_INDEX"}'
+      env:
+      - name: SGLANG_HOST_IP
+        valueFrom: {fieldRef: {fieldPath: status.podIP}}
+      - name: HOST_IP
+        valueFrom: {fieldRef: {fieldPath: status.hostIP}}
+      # - name: GLOO_SOCKET_IFNAME
+      #   value: eth0
+      # - name: NCCL_SOCKET_IFNAME
+      #   value: eth0
+      - name: NCCL_IB_GID_INDEX
+        value: "5"
+      # - name: NCCL_IB_QPS_PER_CONNECTION
+      #   value: "8"
+      # - name: NCCL_NET_PLUGIN
+      #   value: none
+      # - name: NCCL_MIN_NCHANNELS
+      #   value: "4"
+      # - name: NCCL_IB_HCA
+      #   value: "mlx5_0,mlx5_1,mlx5_2,mlx5_3,mlx5_4,mlx5_5,mlx5_6,mlx5_7"
+      # - name: NCCL_IB_TC
+      #   value: "160"
+      - name: NCCL_VERSION
+        value: "2.26.5"
+      - name: "TORCH_NCCL_USE_COMM_NONBLOCKING"
+        value: "0"
+      - name: "NCCL_DEBUG"
+        value: "TRACE"
+      - name: "AWS_OFI_NCCL_VERSION"
+        value: "1.14.0"
+      - name: "UCX_IB_GID_INDEX"
+        value: "5"
+      - name: "UCX_NET_DEVICES"
+        value: "mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_4:1,mlx5_5:1,mlx5_6:1,mlx5_7:1"
+      - name: "UCX_TLS"
+        value: "^tcp"
+      - name: "NVSHMEM_IB_GID_INDEX"
+        value: "5"
+      - name: SGLANG_SET_CPU_AFFINITY
+        value: "true"
+      - name: SGL_ENABLE_JIT_DEEPGEMM
+        value: "1" # TODO: shoule be 1
+      - name: NVSHMEM_DEBUG
+        value: "INFO"
+      - name: NVSHMEM_TOPO_DUMP
+        value: "1"
+      - name: NVSHMEM_IBGDA_DEBUG
+        value: "1"
+      - name: NVSHMEM_TRANSPORT
+        value: "IBGDA"
+      - name: NVSHMEM_IB_TRAFFIC_CLASS
+        value: "160"
+      - name: UCX_IB_TRAFFIC_CLASS
+        value: "160"
+      volumeMounts:
+      - name: shm
+        mountPath: /dev/shm
+      - name: dataset-vol
+        mountPath: /dataset
+      # - name: deepep-config
+      #   mountPath: /etc/deepep
+      volumes:
+      # - name: deepep-config
+      #   configMap:
+      #     name: deepep-config
+      - name: shm
+        emptyDir:
+          medium: Memory
+      - name: dataset-vol
+        persistentVolumeClaim:
+          claimName: dataset
+            # nodeSelector:
+            #   scitix.ai/gpu-type: h100nvlink80
+            # tolerations:
+            # - key: "node.kubernetes.io/unschedulable"
+            #   operator: "Exists"
+            #   effect: "NoSchedule"
+      resources:
+        limits:
+          nvidia.com/gpu: "8"
+          nvidia.com/rdma0: "1"
+          nvidia.com/rdma1: "1"
+          nvidia.com/rdma2: "1"
+          nvidia.com/rdma3: "1"
+          nvidia.com/rdma4: "1"
+          nvidia.com/rdma5: "1"
+          nvidia.com/rdma6: "1"
+          nvidia.com/rdma7: "1"
+        requests:
+          nvidia.com/gpu: "8"
+          nvidia.com/rdma0: "1"
+          nvidia.com/rdma1: "1"
+          nvidia.com/rdma2: "1"
+          nvidia.com/rdma3: "1"
+          nvidia.com/rdma4: "1"
+          nvidia.com/rdma5: "1"
+          nvidia.com/rdma6: "1"
+          nvidia.com/rdma7: "1"

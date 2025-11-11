@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alan-sglang-benchmark
+spec:
+  nodeSelector:
+    public-network: enabled
+  containers:
+  - name: sglang
+    # image: registry-cn-shanghai.siflow.cn/k8s/sglang:v0.5.2-cu126
+    image: registry-cn-shanghai.siflow.cn/k8s/sglang:v0.5.1.post1-cu126
+    command: ["/bin/bash", "-c", "--"]
+    args: ["sleep inf"]
+    volumeMounts:
+    - mountPath: /dataset
+      name: dataset-vol
+    - mountPath: /model
+      name: model-vol
+    - mountPath: /jrshe
+      name: jrshe-vol
+  volumes:
+  - name: dataset-vol
+    persistentVolumeClaim:
+      claimName: dataset
+  - name: model-vol
+    persistentVolumeClaim:
+      claimName: deepseek-r1
+  - name: jrshe-vol
+    hostPath:
+      path: /home/jrshe
